@@ -1,5 +1,5 @@
 
-import { Reservation } from 'src/modules/reservation/entities/reservation.entity';
+import { Reservation } from '../../reservation/entities/reservation.entity';
 import { Entity, Column, PrimaryGeneratedColumn, Index, OneToMany, } from 'typeorm';
 
 @Entity()
@@ -18,6 +18,6 @@ export class Customer {
   @Column()
   phone: string;
 
-  @OneToMany(() => Reservation, reservations => reservations.customer)
+  @OneToMany(() => Reservation, (reservations) => reservations.customer)
   reservations: Reservation[];
 }

@@ -8,12 +8,12 @@ export class Reservation {
   id: number;
   
   @Index()
-  @ManyToOne(() => Customer, customer => customer.reservations)
+  @ManyToOne(() => Customer, (customer) => customer.reservations)
   @JoinColumn()
   customer: Customer | string;
   
   @Index()
-  @ManyToOne(() => Booking, booking => booking.tables)
+  @ManyToOne(() => Booking, (booking) => booking.reservations)
   @JoinColumn()
   table: Booking | string;
   

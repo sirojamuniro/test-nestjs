@@ -9,33 +9,42 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 export class BookingService {
   constructor(
     @InjectRepository(Booking)
-    private bookingTableRepository: Repository<Booking>,
+    private readonly bookingRepository: Repository<Booking>,
   ) {}
-  async create(createTableDto: CreateBookingDto): Promise<Booking> {
-    const table = this.bookingTableRepository.create(createTableDto);
-    return this.bookingTableRepository.save(table);
+
+  // Create a new booking
+  async create(createBookingDto: CreateBookingDto): Promise<Booking> {
+    const booking = this.bookingRepository.create(createBookingDto);
+    return await this.bookingRepository.save(booking);
   }
 
+  // Find all bookings
   async findAll(): Promise<Booking[]> {
-    return this.bookingTableRepository.find();
+    return await this.bookingRepository.find();
   }
 
+  // Find a booking by ID
   async findOne(id: string): Promise<Booking> {
-    const customer = await this.bookingTableRepository.findOne({ where: { id },   relations: {
-      tables: true,
-    } });
-    if (!customer) throw new NotFoundException(`Booking with ID ${id} not found`);
-    return customer;
+    const booking = await this.bookingRepository.findOne({
+      where: { id },
+      relations: ['reservations'], // Adjust as needed to include relations
+    });
+    if (!booking) {
+      throw new NotFoundException(`Booking with ID ${id} not found`);
+    }
+    return booking;
   }
 
-  async update(id: string, updateTableDto: UpdateBookingDto): Promise<Booking> {
-    const table = await this.findOne(id);
-    Object.assign(table, updateTableDto);
-    return this.bookingTableRepository.save(table);
+  // Update an existing booking
+  async update(id: string, updateBookingDto: UpdateBookingDto): Promise<Booking> {
+    const booking = await this.findOne(id);
+    Object.assign(booking, updateBookingDto);
+    return await this.bookingRepository.save(booking);
   }
 
+  // Remove a booking
   async remove(id: string): Promise<void> {
-    const table = await this.findOne(id);
-    await this.bookingTableRepository.remove(table);
+    const booking = await this.findOne(id);
+    await this.bookingRepository.remove(booking);
   }
 }
