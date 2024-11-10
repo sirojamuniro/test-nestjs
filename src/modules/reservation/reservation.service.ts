@@ -1,11 +1,14 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Connection, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, Connection, LessThanOrEqual, MoreThanOrEqual, ILike } from 'typeorm';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { Reservation } from './entities/reservation.entity';
 import { Booking } from '../booking/entities/booking.entity';
 import { Customer } from '../customer/entities/customer.entity';
+import { PageOptionsDto } from '../../common/dto/page-options.dto';
+import { PageDto } from '../../common/dto/page.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
@@ -23,7 +26,7 @@ export class ReservationService {
     private readonly connection: Connection,
   ) {}
 
-  // Method to create a reservation
+  // Create a reservation
   async create(createReservationDto: CreateReservationDto) {
     const { tableId, reservationTime, customerId } = createReservationDto;
     const reservationDate = new Date(reservationTime);
@@ -84,12 +87,26 @@ export class ReservationService {
     });
   }
 
-  // Method to get all reservations
-  async findAll() {
-    return await this.reservationRepository.find();
+  // Get all reservations with pagination
+  async findAll(pageOptionsDto: PageOptionsDto): Promise<PageDto<Reservation>> {
+    const { page, take } = pageOptionsDto;
+    const skip = (page - 1) * take;
+  
+
+  
+    const [reservations, itemCount] = await this.reservationRepository.findAndCount({
+      
+      skip,
+      take,
+      relations: ['table', 'customer'],
+    });
+  
+    const pageMetaDto = new PageMetaDto({ pageOptionsDto, itemCount });
+  
+    return new PageDto(reservations, pageMetaDto);
   }
 
-  // Method to find a reservation by ID with relations
+  // Find a reservation by ID
   async findOne(id: number) {
     const reservation = await this.reservationRepository.findOne({
       where: { id }, 
@@ -102,14 +119,14 @@ export class ReservationService {
     return reservation;
   }
 
-  // Method to update a reservation
+  // Update a reservation
   async update(id: number, updateReservationDto: UpdateReservationDto) {
     const reservation = await this.findOne(id);
     Object.assign(reservation, updateReservationDto);
     return await this.reservationRepository.save(reservation);
   }
 
-  // Method to remove a reservation
+  // Remove a reservation
   async remove(id: number) {
     const reservation = await this.findOne(id);
     return await this.reservationRepository.remove(reservation);
@@ -126,8 +143,8 @@ export class ReservationService {
     return await this.reservationRepository.findOne({
       where: {
         table: { id: tableId },
-        startTime: LessThanOrEqual(endTime),
-        endTime: MoreThanOrEqual(reservationTime),
+        reservationTime: LessThanOrEqual(endTime),
+        reservationTime: MoreThanOrEqual(reservationTime),
       },
     });
   }
