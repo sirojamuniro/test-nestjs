@@ -16,6 +16,9 @@ Copy the .env.example file to .env and configure it with your environment settin
 cp .env.example .env
 Run database migrations using  DB_SYNC=true
 
+nest start
+Running nest (default port 3000)
+
 API Documentation
 This project uses Swagger for API documentation. Once the application is running, visit /api to view the interactive API documentation.
 
