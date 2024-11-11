@@ -9,7 +9,10 @@ import { Customer } from '../customer/entities/customer.entity';
 import { PageOptionsDto } from '../../common/dto/page-options.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
-import * as nodemailer from 'nodemailer';
+import { MailHelper } from '../../common/helpers/mail.helper';
+import * as fs from 'fs';
+import * as path from 'path';
+
 
 @Injectable()
 export class ReservationService {
@@ -81,7 +84,11 @@ export class ReservationService {
       const savedReservation = await this.reservationRepository.save(reservation);
   
       // Send confirmation email (optional)
-      await this.sendConfirmationEmail(customerId);
+      await this.sendConfirmationEmail(customer.email, customer.name, {
+        date: reservationDate.toDateString(),
+        time: reservationDate.toLocaleTimeString(),
+        table: table.name,
+      });
   
       return savedReservation;
     });
@@ -95,7 +102,7 @@ export class ReservationService {
 
   
     const [reservations, itemCount] = await this.reservationRepository.findAndCount({
-      
+
       skip,
       take,
       relations: ['table', 'customer'],
@@ -143,27 +150,31 @@ export class ReservationService {
     return await this.reservationRepository.findOne({
       where: {
         table: { id: tableId },
-        reservationTime: LessThanOrEqual(endTime),
-        reservationTime: MoreThanOrEqual(reservationTime),
+        startTime: LessThanOrEqual(endTime),
+        endTime: MoreThanOrEqual(reservationTime),
       },
     });
   }
 
   // Method to send a confirmation email
-  private async sendConfirmationEmail(customerId: string) {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'your-email@gmail.com',
-        pass: 'your-email-password',
-      },
+  private async sendConfirmationEmail(customerEmail: string, customerName: string, reservationDetails: { date: string; time: string; table: string; }) {
+    const htmlTemplate = fs.readFileSync(path.resolve(__dirname, '../../common/templates/reservation-confirmation.template.html'), 'utf-8');
+    const htmlContent = this.replaceTemplatePlaceholders(htmlTemplate, {
+      customerName,
+      reservationDate: reservationDetails.date,
+      reservationTime: reservationDetails.time,
+      tableNumber: reservationDetails.table,
     });
 
-    await transporter.sendMail({
-      from: 'your-email@gmail.com',
-      to: 'customer@example.com', // Replace with the actual customer's email
-      subject: 'Reservation Confirmation',
-      text: 'Your reservation has been successfully created. Thank you!',
-    });
+    await MailHelper.sendMail(
+      customerEmail,
+      'Reservation Confirmation',
+      'Your reservation has been successfully created. Thank you!',
+      htmlContent
+    );
+  }
+
+  private replaceTemplatePlaceholders(template: string, placeholders: Record<string, string>): string {
+    return Object.entries(placeholders).reduce((acc, [key, value]) => acc.replace(`{{${key}}}`, value), template);
   }
 }
